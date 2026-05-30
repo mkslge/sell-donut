@@ -1,6 +1,17 @@
 import { RatingForm } from "@/components/RatingForm";
+import { minecraftUsernameSchema } from "@/lib/ratings";
 
-export default function RatePage() {
+type RatePageProps = {
+  searchParams: Promise<{
+    username?: string;
+  }>;
+};
+
+export default async function RatePage({ searchParams }: RatePageProps) {
+  const { username } = await searchParams;
+  const parsedUsername = minecraftUsernameSchema.safeParse(username ?? "");
+  const defaultUsername = parsedUsername.success ? parsedUsername.data : "";
+
   return (
     <div className="container">
       <section className="hero">
@@ -15,14 +26,14 @@ export default function RatePage() {
       <section className="grid">
         <div className="panel">
           <h2 className="section-title">New rating</h2>
-          <RatingForm />
+          <RatingForm defaultUsername={defaultUsername} />
         </div>
         <aside className="panel stack">
           <h2 className="section-title">Why these fields?</h2>
           <p className="muted">
             A useful report needs both the outcome and context. For example,
-            "scammed me" is weaker than "took payment for a blaze spawner and
-            logged out."
+            a vague scam claim is weaker than a specific report that the seller
+            took payment for a blaze spawner and logged out.
           </p>
           <p className="help">
             This prototype has no login, so one browser can only submit once

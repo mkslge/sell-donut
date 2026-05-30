@@ -1,4 +1,5 @@
 import type { RatingOutcome, TradeCategory } from "@prisma/client";
+import Link from "next/link";
 import { formatCategory, formatOutcome } from "@/lib/ratings";
 
 type RatingCardProps = {
@@ -24,7 +25,9 @@ export function RatingCard({ rating }: RatingCardProps) {
       <div className="rating-head">
         <div>
           {rating.seller ? (
-            <strong>{rating.seller.minecraftUsername}</strong>
+            <Link href={`/seller/${rating.seller.normalizedUsername}`}>
+              <strong>{rating.seller.minecraftUsername}</strong>
+            </Link>
           ) : (
             <strong>{formatCategory(rating.tradeCategory)} trade</strong>
           )}

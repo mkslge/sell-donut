@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { minecraftUsernameSchema } from "@/lib/ratings";
 import { RatingCard } from "@/components/RatingCard";
@@ -61,12 +61,7 @@ export default async function Home() {
           <div className="rating-list">
             {recentRatings.length ? (
               recentRatings.map((rating) => (
-                <Link
-                  key={rating.id}
-                  href={`/seller/${rating.seller.normalizedUsername}`}
-                >
-                  <RatingCard rating={rating} />
-                </Link>
+                <RatingCard key={rating.id} rating={rating} />
               ))
             ) : (
               <p className="muted">
