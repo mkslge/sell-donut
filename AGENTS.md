@@ -1,129 +1,323 @@
-# SellDonut Agent Notes
 
-You are working on SellDonut, a prototype reputation website for DonutSMP trades.
-The current app is a Next.js prototype with Prisma and SQLite. It lets users search
-Minecraft usernames, view seller ratings, and submit anonymous ratings.
 
-When working in this repo, explain your rationale clearly enough for an intern to
-learn from the change. Keep explanations practical: what changed, why that shape
-fits the project, and what tradeoffs remain.
+## DESIGN
 
-## Current Architecture
+The project should be a React TS Frontend using ShadCN Components, and the backend should be Python FastAPI, with the Database being a sqllite DB
 
-- Frontend: Next.js App Router.
-- Backend behavior: Next.js server actions in `app/actions.ts`.
-- Database access: Prisma client in `lib/prisma.ts`.
-- Database: SQLite for local prototyping.
-- Core schema: `Seller` and `Rating` in `prisma/schema.prisma`.
+## Project Overview
 
-This is good for a first prototype because it is small and easy to run. It is not
-the best long-term backend shape if the project will also serve a Minecraft mod,
-Discord bot, or external API clients.
+Build a seller rating system for DonutSMP trades. The app helps players check whether a seller is trustworthy before buying spawners, items, or other in-game goods.
 
-## Backend Migration Plan: FastAPI
+The system should start small but be designed to scale. The first version needs three core API endpoints:
 
-The next backend milestone should migrate write/read API behavior from Next.js
-server actions to a dedicated FastAPI service.
+1. `POST /rating/{username}`
+2. `GET /rating/{username}`
+3. `GET /rating/{username}/summary`
 
-### Goal
+The app should store individual trade ratings and expose seller reputation data.
 
-Create a FastAPI backend that owns the SellDonut API, validation, rate limiting,
-and database access. The Next.js app should become primarily a frontend client
-that calls the FastAPI API.
+---
 
-This makes the backend easier to reuse from:
+## Product Requirements
 
-- the website
-- a future Minecraft mod
-- a future Minecraft plugin
-- a future Discord verification bot
-- admin/moderation tooling
+### Core Concept
 
-### Target Backend Shape
+A user can submit a rating for a Minecraft seller. A rating records whether the seller was legit or a scammer, what was sold, and optional context about the trade.
 
-Create a `backend/` directory with:
+The system should support multiple ratings per seller.
 
-- `backend/app/main.py` for the FastAPI application.
-- `backend/app/models.py` for database models.
-- `backend/app/schemas.py` for request/response schemas.
-- `backend/app/database.py` for DB session setup.
-- `backend/app/routes/sellers.py` for seller lookup endpoints.
-- `backend/app/routes/ratings.py` for rating submission/listing endpoints.
-- `backend/tests/` for backend tests.
+A seller should not be represented by only one boolean value. Reputation should be calculated from all submitted ratings.
 
-Recommended Python stack:
+---
 
-- FastAPI
-- SQLAlchemy
-- Pydantic
-- Alembic
-- SQLite locally, Postgres-compatible design for production
-- pytest
+## Data Model
 
-### API Contract
+Use a scalable model similar to this:
 
-Implement these endpoints first:
+```ts
+Rating {
+  id: string
+  sellerUsername: string
+  verdict: "LEGIT" | "SCAMMER"
+  itemType: string
+  itemName?: string
+  quantity?: number
+  price?: number
+  currency?: string
+  description?: string
+  evidenceUrl?: string
+  reporterUsername?: string
+  createdAt: Date
+  updatedAt: Date
+}
 
-- `GET /health`
-  - returns backend health status.
-- `GET /sellers/{username}`
-  - returns seller profile, aggregate rating counts, trust label, and recent ratings.
-- `GET /sellers/{username}/ratings`
-  - returns paginated ratings for one seller.
-- `POST /ratings`
-  - creates a rating and creates the seller if needed.
-- `GET /ratings/recent`
-  - returns recent ratings for the homepage feed.
+User {
+  uuid: string //this should be the sellers minecraft uuid, so we can id people who change names, so the flow for rating someone would be somehow checking what uuid the persons username corresponds to, and mapping the rating to that account
+  sellerUsername: string
+  scamCount: number
+  legitCount: number
+}
+```
 
-Keep the same prototype fields:
 
-- `minecraftUsername`
-- `outcome`: `LEGIT`, `SCAM`, or `MIXED`
-- `tradeCategory`: `SPAWNER`, `GEAR`, `MONEY`, or `OTHER`
-- `tradeDescription`
-- `evidenceUrl`
-- `reviewText`
 
-Validation rules should match the current frontend/backend behavior:
+Do not hardcode this only for spawners. Spawners should be one possible `itemType`, not the whole system.
 
-- Minecraft usernames must be 3-16 characters.
-- Minecraft usernames may contain only letters, numbers, and underscores.
-- Review text must be meaningful and capped.
-- Evidence URL is optional but must be valid when present.
-- Anonymous submitters should be rate-limited.
+Suggested `itemType` examples:
 
-### Migration Steps
+```ts
+"SPAWNER"
+"ITEM"
+"MONEY"
+"SERVICE"
+"OTHER"
+```
 
-1. Add the FastAPI backend with matching models and schemas.
-2. Move username normalization, trust-label calculation, and rating validation into
-   the backend.
-3. Add backend tests for validation, seller creation, aggregate counts, and rate
-   limiting.
-4. Replace Next.js Prisma calls and server actions with frontend calls to FastAPI.
-5. Keep Prisma temporarily only until the frontend no longer imports it.
-6. Remove Prisma and Next.js server-action database writes after FastAPI reaches
-   feature parity.
-7. Add environment variables for `NEXT_PUBLIC_API_BASE_URL` and backend
-   `DATABASE_URL`.
+---
 
-### Important Design Notes
+## API Endpoints
 
-- Do not treat anonymous ratings as verified truth. The UI and API should continue
-  to represent them as community reports.
-- Keep API responses stable and simple because a Minecraft mod may depend on them
-  later.
-- Prefer backend-owned validation over frontend-only validation. Frontend validation
-  improves UX, but backend validation protects data integrity.
-- Keep the database schema easy to migrate to Postgres. Avoid SQLite-only behavior
-  in application logic.
-- Do not add authentication during the first FastAPI migration unless explicitly
-  requested. The migration goal is backend separation, not identity verification.
+### `POST /rating/{username}`
 
-### Acceptance Criteria
+Create a new rating for a seller.
 
-- The Next.js website still supports search, seller profiles, recent ratings, and
-  rating submission.
-- FastAPI owns all database reads and writes used by the website.
-- Backend tests pass.
-- Frontend build and lint pass.
-- The local developer flow is documented with commands for starting both services.
+Path parameter:
+
+```ts
+username: string
+```
+
+Request body:
+
+```json
+{
+  "verdict": "LEGIT",
+  "itemType": "SPAWNER",
+  "itemName": "Blaze Spawner",
+  "quantity": 2,
+  "price": 5000000,
+  "currency": "DOLLARS",
+  "description": "Seller delivered after payment.",
+  "evidenceUrl": "https://example.com/screenshot.png",
+  "reporterUsername": "Mark"
+}
+```
+
+Validation rules:
+
+* `username` is required.
+* `verdict` must be either `LEGIT` or `SCAMMER`.
+* `itemType` is required.
+* `description` is optional but recommended.
+* `price`, `quantity`, and `evidenceUrl` are optional.
+* Normalize usernames consistently, preferably lowercase for lookup while preserving display casing if needed.
+
+Response:
+
+```json
+{
+  "id": "rating_id",
+  "sellerUsername": "someSeller",
+  "verdict": "LEGIT",
+  "itemType": "SPAWNER",
+  "itemName": "Blaze Spawner",
+  "quantity": 2,
+  "price": 5000000,
+  "currency": "DOLLARS",
+  "description": "Seller delivered after payment.",
+  "evidenceUrl": "https://example.com/screenshot.png",
+  "reporterUsername": "Mark",
+  "createdAt": "2026-05-30T00:00:00Z"
+}
+```
+
+---
+
+### `GET /rating/{username}`
+
+Return all ratings for a seller.
+
+Response:
+
+```json
+{
+  "sellerUsername": "someSeller",
+  "ratings": [
+    {
+      "id": "rating_id",
+      "verdict": "LEGIT",
+      "itemType": "SPAWNER",
+      "itemName": "Blaze Spawner",
+      "quantity": 2,
+      "price": 5000000,
+      "currency": "DOLLARS",
+      "description": "Seller delivered after payment.",
+      "evidenceUrl": "https://example.com/screenshot.png",
+      "reporterUsername": "Mark",
+      "createdAt": "2026-05-30T00:00:00Z"
+    }
+  ]
+}
+```
+
+Return an empty array if the seller has no ratings.
+
+---
+
+### `GET /rating/{username}/summary`
+
+Return reputation summary for a seller.
+
+Response:
+
+```json
+{
+  "sellerUsername": "someSeller",
+  "totalRatings": 10,
+  "legitCount": 8,
+  "scammerCount": 2,
+  "legitPercentage": 80,
+  "reputation": "MOSTLY_LEGIT"
+}
+```
+
+Suggested reputation labels:
+
+```ts
+"NO_DATA"
+"LEGIT"
+"MOSTLY_LEGIT"
+"MIXED"
+"RISKY"
+"SCAMMER"
+```
+
+Keep the calculation simple for now, but isolate it in its own service/function so it can be changed later.
+
+---
+
+## Engineering Requirements
+
+### Architecture
+
+Use clean separation of concerns:
+
+```txt
+routes/controllers -> services -> repositories/database
+```
+
+Do not put database logic directly inside route handlers.
+
+Recommended structure:
+
+```txt
+src/
+  routes/
+  controllers/
+  services/
+  repositories/
+  models/
+  validators/
+  utils/
+```
+
+### Validation
+
+Validate all request bodies before saving data.
+
+Reject invalid ratings with clear `400 Bad Request` responses.
+
+Example error:
+
+```json
+{
+  "error": "Invalid verdict. Must be LEGIT or SCAMMER."
+}
+```
+
+### Error Handling
+
+Use consistent error responses.
+
+Examples:
+
+```json
+{
+  "error": "Seller username is required."
+}
+```
+
+```json
+{
+  "error": "Internal server error."
+}
+```
+
+Do not leak stack traces in API responses.
+
+### Storage
+
+Start with whichever storage layer is already configured in the project.
+
+If no database exists yet, implement an in-memory repository first, but design the repository interface so it can be swapped for PostgreSQL, MongoDB, or another database later.
+
+The repository should expose methods like:
+
+```ts
+createRating(rating)
+getRatingsBySeller(username)
+getSellerSummary(username)
+```
+
+### Testing
+
+Add tests for:
+
+* Creating a legit rating
+* Creating a scammer rating
+* Rejecting invalid verdicts
+* Getting ratings for a seller
+* Getting an empty rating list for an unknown seller
+* Calculating seller summary correctly
+
+### Code Style
+
+Prioritize readable, simple code.
+
+Avoid premature complexity.
+
+Use explicit names like `sellerUsername`, `reporterUsername`, `verdict`, and `itemType`.
+
+Do not use vague names like `data`, `thing`, `status`, or `value` when a more specific name exists.
+
+---
+
+## Future Scalability
+
+Design the app so these features can be added later:
+
+* User authentication
+* Duplicate report prevention
+* Evidence uploads
+* Admin moderation
+* Rating comments
+* Seller search
+* Item-specific reputation
+* Discord bot integration
+* DonutSMP leaderboard/risk list
+
+Do not implement these yet unless specifically asked.
+
+---
+
+## Important Behavior
+
+When implementing, prefer the smallest complete version that works.
+
+Do not invent unnecessary features.
+
+Do not hardcode DonutSMP-specific item names into the backend.
+
+Do not assume every trade is about spawners.
+
+Treat this as a reputation platform for Minecraft marketplace trades.
