@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request
 
-from app.controllers import rating_controller
+import app.controllers.rating_controller as rating_controller
 from app.integrations.mojang_client import MojangProfileClient
 from app.repositories.rating_repository import RatingRepository
 from app.schemas.rating_schemas import (
