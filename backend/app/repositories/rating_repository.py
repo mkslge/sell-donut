@@ -1,5 +1,5 @@
-import sqlite3
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from app.database import Database
 from app.models.rating import Rating, Verdict, new_id, now_utc
@@ -31,6 +31,7 @@ class RatingRepository:
         normalized_username: str,
         minecraft_uuid: str,
         payload: RatingCreate,
+        submitter_fingerprint: str,
     ) -> Rating:
         """Persist one rating and return the stored domain model.
 
@@ -39,6 +40,8 @@ class RatingRepository:
         - `normalized_username` is the lowercase lookup key for that username.
         - `minecraft_uuid` came from Mojang's profile API.
         - `payload` has already passed API validation.
+        - `submitter_fingerprint` identifies the submitting client for rate
+          limiting.
 
         Postconditions:
         - A seller row exists for `minecraft_uuid`.
@@ -61,13 +64,13 @@ class RatingRepository:
             id=new_id(),
             seller_username=seller_username,
             normalized_username=normalized_username,
-            verdict=payload.verdict,
-            item_type=payload.item_type.strip().upper(),
-            item_name=payload.item_name,
+            verdict=payload.outcome,
+            item_type=payload.trade_category.strip().upper(),
+            item_name=payload.trade_description,
             quantity=payload.quantity,
             price=payload.price,
             currency=payload.currency,
-            description=payload.description,
+            description=payload.review_text,
             evidence_url=str(payload.evidence_url) if payload.evidence_url else None,
             reporter_username=payload.reporter_username,
             created_at=timestamp,
@@ -90,10 +93,11 @@ class RatingRepository:
                 description,
                 evidence_url,
                 reporter_username,
+                submitterFingerprint,
                 created_at,
                 updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 rating.id,
@@ -109,11 +113,48 @@ class RatingRepository:
                 rating.description,
                 rating.evidence_url,
                 rating.reporter_username,
+                submitter_fingerprint,
                 rating.created_at.isoformat(),
                 rating.updated_at.isoformat(),
             ),
         )
         return rating
+
+    def has_recent_submission(self, submitter_fingerprint: str, minutes: int = 1) -> bool:
+        """Return whether a fingerprint has submitted a rating recently."""
+        cutoff = datetime.now(UTC) - timedelta(minutes=minutes)
+        rows = self.database.query(
+            """
+            SELECT id
+            FROM ratings
+            WHERE submitterFingerprint = ?
+              AND created_at >= ?
+            """,
+            (submitter_fingerprint, cutoff.isoformat()),
+        )
+        return bool(rows)
+
+    def list_recent_ratings(self, limit: int = 8) -> list[Rating]:
+        """Return the newest ratings across all sellers."""
+        if self.database.backend == "azure_sql":
+            rows = self.database.query(
+                f"""
+                SELECT TOP ({limit}) *
+                FROM ratings
+                ORDER BY created_at DESC
+                """
+            )
+        else:
+            rows = self.database.query(
+                """
+                SELECT *
+                FROM ratings
+                ORDER BY created_at DESC
+                LIMIT ?
+                """,
+                (limit,),
+            )
+        return [self._row_to_rating(row) for row in rows]
 
     def list_ratings(self, seller_id: str) -> list[Rating]:
         """Return all ratings for a seller id, newest first.
@@ -136,7 +177,7 @@ class RatingRepository:
         )
         return [self._row_to_rating(row) for row in rows]
 
-    def get_seller_by_uuid(self, minecraft_uuid: str) -> sqlite3.Row | None:
+    def get_seller_by_uuid(self, minecraft_uuid: str) -> dict[str, Any] | None:
         """Return the seller row for a Mojang UUID.
 
         Preconditions:
@@ -146,15 +187,25 @@ class RatingRepository:
         - Returns the seller row when the UUID has stored ratings.
         - Returns `None` when this account has no stored seller row.
         """
-        rows = self.database.query(
-            """
-            SELECT *
-            FROM sellers
-            WHERE minecraft_uuid = ?
-            LIMIT 1
-            """,
-            (minecraft_uuid,),
-        )
+        if self.database.backend == "azure_sql":
+            rows = self.database.query(
+                """
+                SELECT TOP 1 *
+                FROM sellers
+                WHERE minecraft_uuid = ?
+                """,
+                (minecraft_uuid,),
+            )
+        else:
+            rows = self.database.query(
+                """
+                SELECT *
+                FROM sellers
+                WHERE minecraft_uuid = ?
+                LIMIT 1
+                """,
+                (minecraft_uuid,),
+            )
         if not rows:
             return None
         return rows[0]
@@ -183,26 +234,46 @@ class RatingRepository:
         UUID lookup is primary, with normalized username as a legacy fallback so
         rows created before Mojang integration can be upgraded in place.
         """
-        existing = self.database.query(
-            """
-            SELECT id
-            FROM sellers
-            WHERE minecraft_uuid = ?
-            LIMIT 1
-            """,
-            (minecraft_uuid,),
-        )
-
-        if not existing:
+        if self.database.backend == "azure_sql":
+            existing = self.database.query(
+                """
+                SELECT TOP 1 id
+                FROM sellers
+                WHERE minecraft_uuid = ?
+                """,
+                (minecraft_uuid,),
+            )
+        else:
             existing = self.database.query(
                 """
                 SELECT id
                 FROM sellers
-                WHERE normalized_username = ?
+                WHERE minecraft_uuid = ?
                 LIMIT 1
                 """,
-                (normalized_username,),
+                (minecraft_uuid,),
             )
+
+        if not existing:
+            if self.database.backend == "azure_sql":
+                existing = self.database.query(
+                    """
+                    SELECT TOP 1 id
+                    FROM sellers
+                    WHERE normalized_username = ?
+                    """,
+                    (normalized_username,),
+                )
+            else:
+                existing = self.database.query(
+                    """
+                    SELECT id
+                    FROM sellers
+                    WHERE normalized_username = ?
+                    LIMIT 1
+                    """,
+                    (normalized_username,),
+                )
 
         if existing:
             seller_id = str(existing[0]["id"])
@@ -249,7 +320,7 @@ class RatingRepository:
         )
         return seller_id
 
-    def _row_to_rating(self, row: sqlite3.Row) -> Rating:
+    def _row_to_rating(self, row: dict[str, Any]) -> Rating:
         """Convert a SQLite row into a typed `Rating` domain object.
 
         Preconditions:

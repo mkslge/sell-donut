@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { RatingOutcome } from "@prisma/client";
 import { RatingCard } from "@/components/RatingCard";
 import { RatingForm } from "@/components/RatingForm";
 import { PageContainer } from "@/components/layout/PageContainer";
@@ -20,8 +19,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { prisma } from "@/lib/prisma";
 import { minecraftUsernameSchema, trustLabel } from "@/lib/ratings";
+import { getSellerRatings, getSellerSummary, summarizeCounts } from "@/lib/api";
 
 export default async function SellerPage({ params }: SellerPageProps) {
   const { username } = await params;
@@ -32,28 +31,25 @@ export default async function SellerPage({ params }: SellerPageProps) {
   }
 
   const normalizedUsername = parsedUsername.data.toLowerCase();
-  const seller = await prisma.seller.findUnique({
-    where: { normalizedUsername },
-    include: {
-      ratings: {
-        orderBy: { createdAt: "desc" },
-      },
-    },
-  });
+  const [sellerRatings, sellerSummary] = await Promise.all([
+    getSellerRatings(normalizedUsername).catch(() => ({
+      sellerUsername: parsedUsername.data,
+      ratings: [],
+    })),
+    getSellerSummary(normalizedUsername).catch(() => ({
+      sellerUsername: parsedUsername.data,
+      totalRatings: 0,
+      legitCount: 0,
+      scammerCount: 0,
+      mixedCount: 0,
+      legitPercentage: 0,
+      reputation: "NO_DATA",
+    })),
+  ]);
 
-  const ratings = seller?.ratings ?? [];
-  const counts = ratings.reduce(
-    (acc, rating) => {
-      acc.total += 1;
-      if (rating.outcome === RatingOutcome.LEGIT) acc.legit += 1;
-      if (rating.outcome === RatingOutcome.SCAM) acc.scam += 1;
-      if (rating.outcome === RatingOutcome.MIXED) acc.mixed += 1;
-      return acc;
-    },
-    { total: 0, legit: 0, scam: 0, mixed: 0 },
-  );
-
-  const displayName = seller?.minecraftUsername ?? parsedUsername.data;
+  const ratings = sellerRatings.ratings;
+  const counts = summarizeCounts(ratings);
+  const displayName = sellerSummary.sellerUsername ?? sellerRatings.sellerUsername;
 
   return (
     <PageContainer>
@@ -78,7 +74,9 @@ export default async function SellerPage({ params }: SellerPageProps) {
         <Card>
           <CardHeader>
             <CardTitle>Trust snapshot</CardTitle>
-            <CardDescription>Aggregate community reports for this username.</CardDescription>
+            <CardDescription>
+              Aggregate community reports for this username.
+            </CardDescription>
             <CardAction>
               <Badge variant="outline">{trustLabel(counts)}</Badge>
             </CardAction>
@@ -86,10 +84,10 @@ export default async function SellerPage({ params }: SellerPageProps) {
           <CardContent>
             <StatsGrid
               stats={[
-                { label: "Total", value: counts.total },
-                { label: "Legit", value: counts.legit },
-                { label: "Scam", value: counts.scam },
-                { label: "Mixed", value: counts.mixed },
+                { label: "Total", value: sellerSummary.totalRatings },
+                { label: "Legit", value: sellerSummary.legitCount },
+                { label: "Scam", value: sellerSummary.scammerCount },
+                { label: "Mixed", value: sellerSummary.mixedCount },
               ]}
             />
           </CardContent>

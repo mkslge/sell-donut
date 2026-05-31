@@ -1,6 +1,6 @@
-import type { RatingOutcome, TradeCategory } from "@prisma/client";
 import type { z } from "zod";
 import type { ratingSchema } from "@/lib/ratings";
+import type { RatingOutcome, TradeCategory } from "@/lib/ratings";
 
 export type RatingInput = z.infer<typeof ratingSchema>;
 
@@ -14,16 +14,48 @@ export type RatingFormProps = {
 };
 
 export type RatingCardRating = {
+  id: string;
+  sellerUsername: string;
+  verdict: RatingOutcome;
+  tradeCategory: TradeCategory;
+  tradeDescription: string;
+  reviewText: string;
+  quantity: number | null;
+  price: number | null;
+  currency: string | null;
+  evidenceUrl: string | null;
+  reporterUsername: string | null;
+  createdAt: Date;
+};
+
+export type BackendRatingResponse = {
+  id: string;
+  sellerUsername: string;
   outcome: RatingOutcome;
   tradeCategory: TradeCategory;
   tradeDescription: string;
-  evidenceUrl: string | null;
+  quantity: number | null;
+  price: number | null;
+  currency: string | null;
   reviewText: string;
-  createdAt: Date;
-  seller?: {
-    minecraftUsername: string;
-    normalizedUsername: string;
-  };
+  evidenceUrl: string | null;
+  reporterUsername: string | null;
+  createdAt: string;
+};
+
+export type BackendSellerRatingsResponse = {
+  sellerUsername: string;
+  ratings: BackendRatingResponse[];
+};
+
+export type BackendSellerSummaryResponse = {
+  sellerUsername: string;
+  totalRatings: number;
+  legitCount: number;
+  scammerCount: number;
+  mixedCount: number;
+  legitPercentage: number;
+  reputation: string;
 };
 
 export type RatingCardProps = {

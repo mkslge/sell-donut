@@ -6,7 +6,7 @@ def calculate_reputation(ratings: list[Rating]) -> Reputation:
 
     Preconditions:
     - `ratings` contains all known ratings for the seller.
-    - Each rating verdict is either `LEGIT` or `SCAMMER`.
+    - Each rating verdict is `LEGIT`, `SCAMMER`, or `MIXED`.
 
     Postconditions:
     - Returns exactly one `Reputation` enum value.
@@ -22,7 +22,7 @@ def calculate_reputation(ratings: list[Rating]) -> Reputation:
         return Reputation.NO_DATA
 
     scammer_count = sum(1 for rating in ratings if rating.verdict == Verdict.SCAMMER)
-    legit_count = total - scammer_count
+    legit_count = sum(1 for rating in ratings if rating.verdict == Verdict.LEGIT)
     legit_percentage = round((legit_count / total) * 100)
 
     if total >= 3 and scammer_count == total:

@@ -58,7 +58,7 @@ export function RatingForm({ defaultUsername = "" }: RatingFormProps) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="LEGIT">Legit</SelectItem>
-              <SelectItem value="SCAM">Scam</SelectItem>
+              <SelectItem value="SCAMMER">Scam</SelectItem>
               <SelectItem value="MIXED">Mixed</SelectItem>
             </SelectContent>
           </Select>

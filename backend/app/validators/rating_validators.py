@@ -17,8 +17,14 @@ def validate_rating_payload(payload: RatingCreate) -> RatingCreate:
     Pydantic handles most structural validation. This function is the place for
     business rules that should remain explicit and reusable by services.
     """
-    if not payload.item_type.strip():
-        raise HTTPException(status_code=400, detail="itemType is required.")
+    if not payload.trade_category.strip():
+        raise HTTPException(status_code=400, detail="tradeCategory is required.")
+
+    if not payload.trade_description.strip():
+        raise HTTPException(status_code=400, detail="tradeDescription is required.")
+
+    if not payload.review_text.strip():
+        raise HTTPException(status_code=400, detail="reviewText is required.")
 
     if payload.quantity is not None and payload.quantity < 1:
         raise HTTPException(status_code=400, detail="quantity must be at least 1.")

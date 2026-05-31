@@ -7,13 +7,22 @@ from app.models.rating import Reputation, Verdict
 
 
 class RatingCreate(BaseModel):
-    verdict: Verdict
-    item_type: Annotated[str, Field(alias="itemType", min_length=1, max_length=60)]
-    item_name: Annotated[str | None, Field(alias="itemName", max_length=120)] = None
+    outcome: Verdict
+    trade_category: Annotated[
+        str,
+        Field(alias="tradeCategory", min_length=1, max_length=60),
+    ]
+    trade_description: Annotated[
+        str,
+        Field(alias="tradeDescription", min_length=1, max_length=120),
+    ]
     quantity: Annotated[int | None, Field(ge=1)] = None
     price: Annotated[float | None, Field(ge=0)] = None
     currency: Annotated[str | None, Field(max_length=32)] = None
-    description: Annotated[str | None, Field(max_length=1000)] = None
+    review_text: Annotated[
+        str,
+        Field(alias="reviewText", min_length=10, max_length=1000),
+    ]
     evidence_url: Annotated[HttpUrl | None, Field(alias="evidenceUrl")] = None
     reporter_username: Annotated[
         str | None,
@@ -26,13 +35,13 @@ class RatingCreate(BaseModel):
 class RatingResponse(BaseModel):
     id: str
     seller_username: str = Field(alias="sellerUsername")
-    verdict: Verdict
-    item_type: str = Field(alias="itemType")
-    item_name: str | None = Field(default=None, alias="itemName")
+    outcome: Verdict
+    trade_category: str = Field(alias="tradeCategory")
+    trade_description: str = Field(alias="tradeDescription")
     quantity: int | None = None
     price: float | None = None
     currency: str | None = None
-    description: str | None = None
+    review_text: str = Field(alias="reviewText")
     evidence_url: str | None = Field(default=None, alias="evidenceUrl")
     reporter_username: str | None = Field(default=None, alias="reporterUsername")
     created_at: datetime = Field(alias="createdAt")
@@ -52,6 +61,7 @@ class SellerSummaryResponse(BaseModel):
     total_ratings: int = Field(alias="totalRatings")
     legit_count: int = Field(alias="legitCount")
     scammer_count: int = Field(alias="scammerCount")
+    mixed_count: int = Field(alias="mixedCount")
     legit_percentage: int = Field(alias="legitPercentage")
     reputation: Reputation
 

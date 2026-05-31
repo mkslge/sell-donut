@@ -15,9 +15,9 @@ import {
 
 export function RatingCard({ rating }: RatingCardProps) {
   const badgeVariant =
-    rating.outcome === "SCAM"
+    rating.verdict === "SCAMMER"
       ? "destructive"
-      : rating.outcome === "MIXED"
+      : rating.verdict === "MIXED"
         ? "secondary"
         : "default";
 
@@ -25,32 +25,24 @@ export function RatingCard({ rating }: RatingCardProps) {
     <Card>
       <CardHeader>
         <div className="flex items-start gap-3">
-          {rating.seller ? (
-            <SellerAvatar
-              username={rating.seller.minecraftUsername}
-              alt={`${rating.seller.minecraftUsername} avatar`}
-              size="sm"
-              className="mt-0.5"
-            />
-          ) : null}
+          <SellerAvatar
+            username={rating.sellerUsername}
+            alt={`${rating.sellerUsername} avatar`}
+            size="sm"
+            className="mt-0.5"
+          />
           <div className="min-w-0 flex-1">
             <CardTitle>
-              {rating.seller ? (
-                <Link href={`/seller/${rating.seller.normalizedUsername}`}>
-                  {rating.seller.minecraftUsername}
-                </Link>
-              ) : (
-                `${formatCategory(rating.tradeCategory)} trade`
-              )}
+              <Link href={`/seller/${rating.sellerUsername.toLowerCase()}`}>
+                {rating.sellerUsername}
+              </Link>
             </CardTitle>
             <CardDescription>
               {formatCategory(rating.tradeCategory)} ·{" "}
               {rating.createdAt.toLocaleDateString()}
             </CardDescription>
           </div>
-          <Badge variant={badgeVariant}>
-            {formatOutcome(rating.outcome)}
-          </Badge>
+          <Badge variant={badgeVariant}>{formatOutcome(rating.verdict)}</Badge>
         </div>
       </CardHeader>
       <CardContent className="grid gap-3">

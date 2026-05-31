@@ -4,21 +4,17 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "next build",
     "start": "next start",
-    "lint": "eslint .",
-    "db:push": "prisma db push",
-    "prisma:generate": "prisma generate"
+    "lint": "eslint ."
   },
   "dependencies": {
     "@fontsource/outfit": "^5.2.8",
     "@fontsource/space-mono": "^5.2.9",
-    "@prisma/client": "^6.8.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.17.0",
     "next": "^15.3.2",
-    "prisma": "^6.8.2",
     "radix-ui": "^1.4.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

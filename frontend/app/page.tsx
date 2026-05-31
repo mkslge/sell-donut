@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Search } from "lucide-react";
-import { prisma } from "@/lib/prisma";
 import { minecraftUsernameSchema } from "@/lib/ratings";
+import { getRecentRatings } from "@/lib/api";
 import { RatingCard } from "@/components/RatingCard";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHero } from "@/components/layout/PageHero";
@@ -32,18 +32,7 @@ async function searchSeller(formData: FormData) {
 }
 
 export default async function Home() {
-  const recentRatings = await prisma.rating.findMany({
-    orderBy: { createdAt: "desc" },
-    take: 8,
-    include: {
-      seller: {
-        select: {
-          minecraftUsername: true,
-          normalizedUsername: true,
-        },
-      },
-    },
-  });
+  const recentRatings = await getRecentRatings().catch(() => []);
 
   return (
     <PageContainer>
@@ -85,7 +74,7 @@ export default async function Home() {
           <div className="grid gap-3">
             {recentRatings.length ? (
               recentRatings.map((rating) => (
-                <RatingCard key={rating.id} rating={rating} />
+              <RatingCard key={rating.id} rating={rating} />
               ))
             ) : (
               <p className="text-sm text-muted-foreground">

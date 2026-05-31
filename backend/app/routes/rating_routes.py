@@ -10,6 +10,7 @@ from app.schemas.rating_schemas import (
     SellerSummaryResponse,
 )
 from app.services.rating_service import RatingService
+from app.utils.request_metadata import submitter_fingerprint
 
 
 router = APIRouter(prefix="/rating", tags=["ratings"])
@@ -33,6 +34,12 @@ def get_rating_service(request: Request) -> RatingService:
     return RatingService(repository=repository, mojang_client=mojang_client)
 
 
+@router.get("/recent", response_model=list[RatingResponse])
+def list_recent_ratings(request: Request, limit: int = 8) -> list[RatingResponse]:
+    """Handle `GET /rating/recent`."""
+    return rating_controller.list_recent_ratings(get_rating_service(request), limit=limit)
+
+
 @router.post("/{username}", response_model=RatingResponse, status_code=201)
 def create_rating(
     username: str,
@@ -52,6 +59,7 @@ def create_rating(
         username=username,
         payload=payload,
         service=get_rating_service(request),
+        submitter_fingerprint=submitter_fingerprint(request),
     )
 
 

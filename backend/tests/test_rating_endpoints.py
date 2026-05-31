@@ -43,13 +43,13 @@ def test_rating_flow(tmp_path):
         create_response = client.post(
             "/rating/SomeSeller",
             json={
-                "verdict": "LEGIT",
-                "itemType": "SPAWNER",
-                "itemName": "Blaze Spawner",
+                "outcome": "LEGIT",
+                "tradeCategory": "SPAWNER",
+                "tradeDescription": "Blaze spawner",
                 "quantity": 2,
                 "price": 5000000,
                 "currency": "DOLLARS",
-                "description": "Seller delivered after payment.",
+                "reviewText": "Seller delivered after payment.",
                 "evidenceUrl": "https://example.com/screenshot.png",
                 "reporterUsername": "Mark",
             },
@@ -58,8 +58,10 @@ def test_rating_flow(tmp_path):
         assert create_response.status_code == 201
         created = create_response.json()
         assert created["sellerUsername"] == "SomeSeller"
-        assert created["verdict"] == "LEGIT"
-        assert created["itemType"] == "SPAWNER"
+        assert created["outcome"] == "LEGIT"
+        assert created["tradeCategory"] == "SPAWNER"
+        assert created["tradeDescription"] == "Blaze spawner"
+        assert created["reviewText"] == "Seller delivered after payment."
 
         list_response = client.get("/rating/someseller")
         assert list_response.status_code == 200
@@ -73,8 +75,15 @@ def test_rating_flow(tmp_path):
         assert summary["totalRatings"] == 1
         assert summary["legitCount"] == 1
         assert summary["scammerCount"] == 0
+        assert summary["mixedCount"] == 0
         assert summary["legitPercentage"] == 100
         assert summary["reputation"] == "LEGIT"
+
+        recent_response = client.get("/rating/recent")
+        assert recent_response.status_code == 200
+        recent = recent_response.json()
+        assert len(recent) == 1
+        assert recent[0]["sellerUsername"] == "SomeSeller"
 
 
 def test_empty_seller_returns_empty_rating_list_and_no_data_summary(tmp_path):
@@ -93,6 +102,7 @@ def test_empty_seller_returns_empty_rating_list_and_no_data_summary(tmp_path):
             "totalRatings": 0,
             "legitCount": 0,
             "scammerCount": 0,
+            "mixedCount": 0,
             "legitPercentage": 0,
             "reputation": "NO_DATA",
         }
@@ -119,9 +129,10 @@ def test_ratings_follow_mojang_uuid_when_username_changes(tmp_path):
         create_response = client.post(
             "/rating/OldName",
             json={
-                "verdict": "SCAMMER",
-                "itemType": "ITEM",
-                "description": "Seller kept the item and did not pay.",
+                "outcome": "SCAMMER",
+                "tradeCategory": "OTHER",
+                "tradeDescription": "Item trade",
+                "reviewText": "Seller kept the item and did not pay.",
             },
         )
         assert create_response.status_code == 201
@@ -132,7 +143,7 @@ def test_ratings_follow_mojang_uuid_when_username_changes(tmp_path):
         body = list_response.json()
         assert body["sellerUsername"] == "NewName"
         assert len(body["ratings"]) == 1
-        assert body["ratings"][0]["verdict"] == "SCAMMER"
+        assert body["ratings"][0]["outcome"] == "SCAMMER"
 
 
 def test_avatar_route_redirects_to_mineatar(tmp_path):
@@ -147,3 +158,21 @@ def test_avatar_route_redirects_to_mineatar(tmp_path):
         response.headers["location"]
         == "https://api.mineatar.io/face/069a79f444e94726a5befca90e38aaf5?scale=32"
     )
+
+
+def test_rating_rate_limit_is_enforced(tmp_path):
+    app = make_app(tmp_path)
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as client:
+        payload = {
+            "outcome": "LEGIT",
+            "tradeCategory": "GEAR",
+            "tradeDescription": "Diamond set",
+            "reviewText": "Seller delivered the items after payment.",
+        }
+        first_response = client.post("/rating/SomeSeller", json=payload)
+        second_response = client.post("/rating/SomeSeller", json=payload)
+
+    assert first_response.status_code == 201
+    assert second_response.status_code == 429

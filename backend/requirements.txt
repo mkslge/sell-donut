@@ -1,4 +1,7 @@
 fastapi==0.122.0
+sqlalchemy==2.0.50
+pyodbc==5.3.0
+azure-identity==1.25.3
 uvicorn[standard]==0.38.0
 pytest==9.0.1
 httpx==0.28.1

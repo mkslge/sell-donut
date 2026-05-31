@@ -7,6 +7,7 @@ from uuid import uuid4
 class Verdict(StrEnum):
     LEGIT = "LEGIT"
     SCAMMER = "SCAMMER"
+    MIXED = "MIXED"
 
 
 class Reputation(StrEnum):

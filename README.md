@@ -5,7 +5,7 @@ SellDonut is a prototype reputation board for DonutSMP trades. Players can look 
 ## Project Layout
 
 - `frontend/` - Next.js app with shadcn components
-- `backend/` - FastAPI API with SQLite
+- `backend/` - FastAPI API with PostgreSQL
 
 ## Run the backend
 
@@ -16,6 +16,10 @@ python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
 Backend API: `http://127.0.0.1:8000`
+
+For local Azure SQL testing, set `AZURE_SQL_CONNECTIONSTRING` in the backend
+environment and use `Authentication=ActiveDirectoryDefault` with `az login`.
+The backend uses SQLAlchemy + pyodbc for Azure SQL access.
 
 ## Run the frontend
 
@@ -48,4 +52,5 @@ npm run build
 ## Notes
 
 - Avatar images are served through the backend at `/avatar/{username}`.
+- The frontend does not access the database directly; it talks to the FastAPI API.
 - The prototype currently uses anonymous community reports, not verified trade proof.

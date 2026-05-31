@@ -37,12 +37,18 @@ class RatingService:
         self.repository = repository
         self.mojang_client = mojang_client
 
-    def create_rating(self, username: str, payload: RatingCreate) -> Rating:
+    def create_rating(
+        self,
+        username: str,
+        payload: RatingCreate,
+        submitter_fingerprint: str,
+    ) -> Rating:
         """Validate and create a seller rating.
 
         Preconditions:
         - `username` is raw path input from the API.
         - `payload` is a parsed Pydantic request body.
+        - `submitter_fingerprint` identifies the submitting client.
 
         Postconditions:
         - Invalid usernames or payloads raise `HTTPException`.
@@ -53,11 +59,19 @@ class RatingService:
         seller_username = profile.username
         validated_payload = validate_rating_payload(payload)
         normalized_username = normalize_username(seller_username)
+
+        if self.repository.has_recent_submission(submitter_fingerprint):
+            raise HTTPException(
+                status_code=429,
+                detail="You can submit one rating every 1 minute in this prototype.",
+            )
+
         return self.repository.create_rating(
             seller_username=seller_username,
             normalized_username=normalized_username,
             minecraft_uuid=profile.uuid,
             payload=validated_payload,
+            submitter_fingerprint=submitter_fingerprint,
         )
 
     def list_ratings(self, username: str) -> tuple[str, list[Rating]]:
@@ -99,6 +113,7 @@ class RatingService:
         total = len(ratings)
         legit_count = sum(1 for rating in ratings if rating.verdict == Verdict.LEGIT)
         scammer_count = sum(1 for rating in ratings if rating.verdict == Verdict.SCAMMER)
+        mixed_count = sum(1 for rating in ratings if rating.verdict == Verdict.MIXED)
         legit_percentage = round((legit_count / total) * 100) if total else 0
 
         return {
@@ -106,9 +121,14 @@ class RatingService:
             "total_ratings": total,
             "legit_count": legit_count,
             "scammer_count": scammer_count,
+            "mixed_count": mixed_count,
             "legit_percentage": legit_percentage,
             "reputation": calculate_reputation(ratings),
         }
+
+    def recent_ratings(self, limit: int = 8) -> list[Rating]:
+        """Return the newest ratings across all sellers."""
+        return self.repository.list_recent_ratings(limit=limit)
 
     def resolve_profile(self, username: str) -> MinecraftProfile:
         """Expose Mojang identity resolution for other backend routes.

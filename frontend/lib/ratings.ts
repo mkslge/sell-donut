@@ -1,7 +1,11 @@
-import { headers } from "next/headers";
-import { RatingOutcome, TradeCategory } from "@prisma/client";
 import { z } from "zod";
 import type { TrustCounts } from "@/lib/types";
+
+export const ratingOutcomeValues = ["LEGIT", "SCAMMER", "MIXED"] as const;
+export const tradeCategoryValues = ["SPAWNER", "GEAR", "MONEY", "OTHER"] as const;
+
+export type RatingOutcome = (typeof ratingOutcomeValues)[number];
+export type TradeCategory = (typeof tradeCategoryValues)[number];
 
 export const minecraftUsernameSchema = z
   .string()
@@ -10,8 +14,8 @@ export const minecraftUsernameSchema = z
 
 export const ratingSchema = z.object({
   minecraftUsername: minecraftUsernameSchema,
-  outcome: z.nativeEnum(RatingOutcome),
-  tradeCategory: z.nativeEnum(TradeCategory),
+  outcome: z.enum(ratingOutcomeValues),
+  tradeCategory: z.enum(tradeCategoryValues),
   tradeDescription: z
     .string()
     .trim()
@@ -36,7 +40,7 @@ export function normalizeUsername(username: string) {
 
 export function formatOutcome(outcome: RatingOutcome) {
   if (outcome === "LEGIT") return "Legit";
-  if (outcome === "SCAM") return "Scam";
+  if (outcome === "SCAMMER") return "Scam";
   return "Mixed";
 }
 
@@ -53,16 +57,4 @@ export function trustLabel(counts: TrustCounts) {
   if (counts.legit >= 3 && counts.legit > counts.scam * 2) return "Mostly legit reports";
   if (counts.scam > counts.legit) return "Scam reports present";
   return "Mixed community reports";
-}
-
-export async function submitterFingerprint() {
-  const headerList = await headers();
-  const forwardedFor = headerList.get("x-forwarded-for") ?? "";
-  const realIp = headerList.get("x-real-ip") ?? "";
-  const userAgent = headerList.get("user-agent") ?? "";
-
-  return `${forwardedFor.split(",")[0] || realIp || "unknown"}:${userAgent.slice(
-    0,
-    120,
-  )}`;
 }

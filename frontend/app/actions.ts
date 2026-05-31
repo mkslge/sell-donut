@@ -1,28 +1,33 @@
 "use server";
 
-import { RatingOutcome, TradeCategory } from "@prisma/client";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
 import type { RatingFormState } from "@/lib/types";
-import {
-  normalizeUsername,
-  ratingSchema,
-  submitterFingerprint,
-} from "@/lib/ratings";
+import { minecraftUsernameSchema, ratingSchema } from "@/lib/ratings";
+import { BackendError, fetchBackendJson, type RatingCreatePayload } from "@/lib/api";
+import { normalizeUsername } from "@/lib/ratings";
 
-const FIFTEEN_MINUTES = 15 * 60 * 1000;
+function fieldValue(formData: FormData, name: string) {
+  const value = formData.get(name);
+  return typeof value === "string" ? value : "";
+}
+
+function optionalFieldValue(formData: FormData, name: string) {
+  const value = formData.get(name);
+  return typeof value === "string" && value.length ? value : undefined;
+}
 
 export async function createRating(
   _previousState: RatingFormState,
   formData: FormData,
 ): Promise<RatingFormState> {
   const raw = {
-    minecraftUsername: formData.get("minecraftUsername"),
-    outcome: formData.get("outcome") || RatingOutcome.MIXED,
-    tradeCategory: formData.get("tradeCategory") || TradeCategory.OTHER,
-    tradeDescription: formData.get("tradeDescription"),
-    evidenceUrl: formData.get("evidenceUrl"),
-    reviewText: formData.get("reviewText"),
+    minecraftUsername: fieldValue(formData, "minecraftUsername"),
+    outcome: fieldValue(formData, "outcome"),
+    tradeCategory: fieldValue(formData, "tradeCategory"),
+    tradeDescription: fieldValue(formData, "tradeDescription"),
+    evidenceUrl: optionalFieldValue(formData, "evidenceUrl"),
+    reviewText: fieldValue(formData, "reviewText"),
   };
 
   const parsed = ratingSchema.safeParse(raw);
@@ -34,48 +39,42 @@ export async function createRating(
     };
   }
 
-  const fingerprint = await submitterFingerprint();
-  const recentSubmission = await prisma.rating.findFirst({
-    where: {
-      submitterFingerprint: fingerprint,
-      createdAt: {
-        gte: new Date(Date.now() - FIFTEEN_MINUTES),
-      },
-    },
-    select: { id: true },
-  });
-
-  if (recentSubmission) {
+  const username = minecraftUsernameSchema.safeParse(parsed.data.minecraftUsername);
+  if (!username.success) {
     return {
-      message: "You can submit one rating every 15 minutes in this prototype.",
+      message: "Please fix the highlighted fields.",
+      errors: { minecraftUsername: ["Use a valid Minecraft username."] },
     };
   }
 
-  const { minecraftUsername, ...rating } = parsed.data;
-  const normalizedUsername = normalizeUsername(minecraftUsername);
+  const incomingHeaders = await headers();
+  const backendHeaders = {
+    "x-forwarded-for": incomingHeaders.get("x-forwarded-for") ?? "",
+    "x-real-ip": incomingHeaders.get("x-real-ip") ?? "",
+    "user-agent": incomingHeaders.get("user-agent") ?? "",
+  };
 
-  await prisma.seller.upsert({
-    where: { normalizedUsername },
-    update: {
-      minecraftUsername,
-      ratings: {
-        create: {
-          ...rating,
-          submitterFingerprint: fingerprint,
-        },
-      },
-    },
-    create: {
-      minecraftUsername,
-      normalizedUsername,
-      ratings: {
-        create: {
-          ...rating,
-          submitterFingerprint: fingerprint,
-        },
-      },
-    },
-  });
+  const payload: RatingCreatePayload = {
+    outcome: parsed.data.outcome,
+    tradeCategory: parsed.data.tradeCategory,
+    tradeDescription: parsed.data.tradeDescription,
+    reviewText: parsed.data.reviewText,
+    evidenceUrl: parsed.data.evidenceUrl,
+  };
 
-  redirect(`/seller/${encodeURIComponent(normalizedUsername)}`);
+  try {
+    await fetchBackendJson(`/rating/${encodeURIComponent(username.data)}`, {
+      method: "POST",
+      json: payload,
+      headers: backendHeaders,
+    });
+  } catch (error) {
+    if (error instanceof BackendError) {
+      return { message: error.message };
+    }
+
+    return { message: "Could not submit the rating right now." };
+  }
+
+  redirect(`/seller/${encodeURIComponent(normalizeUsername(username.data))}`);
 }
