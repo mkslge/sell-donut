@@ -43,7 +43,7 @@ export default async function RatePage({ searchParams }: RatePageProps) {
             <p className="text-sm leading-6 text-muted-foreground">
               A useful report needs both the outcome and context. For example,
               a vague scam claim is weaker than a specific report that the seller
-              took payment for a blaze spawner and logged out.
+              took payment for a blaze spawner or base and logged out.
             </p>
             <p className="rounded-lg border bg-accent px-3 py-2 text-sm leading-6 text-accent-foreground">
               This prototype has no login, so one browser can only submit once

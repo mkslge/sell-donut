@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { TrustCounts } from "@/lib/types";
 
 export const ratingOutcomeValues = ["LEGIT", "SCAMMER", "MIXED"] as const;
-export const tradeCategoryValues = ["SPAWNER", "GEAR", "MONEY", "OTHER"] as const;
+export const tradeCategoryValues = ["SPAWNER", "BASE", "GEAR", "MONEY", "OTHER"] as const;
 
 export type RatingOutcome = (typeof ratingOutcomeValues)[number];
 export type TradeCategory = (typeof tradeCategoryValues)[number];
@@ -46,6 +46,7 @@ export function formatOutcome(outcome: RatingOutcome) {
 
 export function formatCategory(category: TradeCategory) {
   if (category === "SPAWNER") return "Spawner";
+  if (category === "BASE") return "Base";
   if (category === "GEAR") return "Gear";
   if (category === "MONEY") return "Money";
   return "Other";

@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 import os
+import sys
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
@@ -8,12 +9,37 @@ from fastapi.responses import JSONResponse
 
 from app.database import Database
 from app.integrations.mojang_client import MojangProfileClient
+from app.repositories.logging_repository import LoggingRepository
 from app.repositories.rating_repository import RatingRepository
 from app.routes.avatar_routes import router as avatar_router
+from app.routes.logging_routes import router as logging_router
 from app.routes.rating_routes import router as rating_router
 
 
 DEFAULT_DB_PATH = Path(__file__).resolve().parents[1] / "selldonut.db"
+
+
+def _print_non_azure_storage_banner() -> None:
+    """Print a loud warning when the app is not using Azure SQL.
+
+    Preconditions:
+    - The process has fallen back to SQLite because no Azure SQL connection
+      string was provided.
+
+    Postconditions:
+    - A prominent red warning is written to stderr so the operator can see
+      that the app is not connected to the Azure database.
+    """
+    banner = """
+========================================================================
+  WARNING: SELLDONUT IS RUNNING WITHOUT AZURE SQL
+
+  The backend has fallen back to SQLite.
+  This means you are NOT connected to the production Azure SQL database.
+  Set AZURE_SQL_CONNECTIONSTRING to force Azure SQL access.
+========================================================================
+"""
+    sys.stderr.write(f"\033[31;1m{banner}\033[0m\n")
 
 
 def create_app(
@@ -43,7 +69,13 @@ def create_app(
         "AZURE_SQL_CONNECTIONSTRING",
     ) or os.getenv("SQL_CONNECTION_STRING")
     database = Database(db_path if not resolved_connection_string else None, resolved_connection_string)
+    if database.backend != "azure_sql":
+        _print_non_azure_storage_banner()
     profile_client = mojang_client or MojangProfileClient()
+
+
+
+
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -60,6 +92,8 @@ def create_app(
           leaked.
         """
         database.initialize()
+        app.state.logging_repository = LoggingRepository(database)
+        app.state.logging_repository.initialize()
         app.state.rating_repository = RatingRepository(database)
         app.state.mojang_client = profile_client
         yield
@@ -118,6 +152,7 @@ def create_app(
         return JSONResponse(status_code=500, content={"error": "Internal server error."})
 
     app.include_router(avatar_router)
+    app.include_router(logging_router)
     app.include_router(rating_router)
     return app
 

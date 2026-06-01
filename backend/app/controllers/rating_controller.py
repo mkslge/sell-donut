@@ -1,6 +1,7 @@
 from app.schemas.rating_schemas import (
     RatingCreate,
     RatingResponse,
+    RatingStatsResponse,
     SellerRatingsResponse,
     SellerSummaryResponse,
 )
@@ -86,3 +87,8 @@ def get_summary(username: str, service: RatingService) -> SellerSummaryResponse:
 def list_recent_ratings(service: RatingService, limit: int = 8) -> list[RatingResponse]:
     """Return the newest ratings across all sellers."""
     return [_rating_to_response(rating) for rating in service.recent_ratings(limit=limit)]
+
+
+def get_stats(service: RatingService) -> RatingStatsResponse:
+    """Return global rating statistics for the landing page."""
+    return RatingStatsResponse(totalRatings=service.total_ratings())

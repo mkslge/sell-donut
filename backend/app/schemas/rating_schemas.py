@@ -66,3 +66,9 @@ class SellerSummaryResponse(BaseModel):
     reputation: Reputation
 
     model_config = ConfigDict(populate_by_name=True)
+
+
+class RatingStatsResponse(BaseModel):
+    total_ratings: int = Field(alias="totalRatings", ge=0)
+
+    model_config = ConfigDict(populate_by_name=True)

@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { minecraftUsernameSchema } from "@/lib/ratings";
-import { getRecentRatings } from "@/lib/api";
+import { getRatingStats, getRecentRatings } from "@/lib/api";
 import { RatingCard } from "@/components/RatingCard";
 import { PageContainer } from "@/components/layout/PageContainer";
 import { PageHero } from "@/components/layout/PageHero";
@@ -32,13 +32,18 @@ async function searchSeller(formData: FormData) {
 }
 
 export default async function Home() {
-  const recentRatings = await getRecentRatings().catch(() => []);
+  const [recentRatings, ratingStats] = await Promise.all([
+    getRecentRatings().catch(() => []),
+    getRatingStats().catch(() => ({ totalRatings: 0 })),
+  ]);
+  const totalRatingsLabel = ratingStats.totalRatings.toLocaleString();
+  const ratingNoun = ratingStats.totalRatings === 1 ? "rating" : "ratings";
 
   return (
     <PageContainer>
       <PageHero
         title="Know who you are trading with before you /pay."
-        description="SellDonut keeps a searchable record of community trade reports, so spawner, item, money, and service deals have a public reputation trail."
+        description={`DonutTrades keeps a searchable record of ${totalRatingsLabel} community ${ratingNoun}, so spawner, base, item, money, and service deals have a public reputation trail.`}
         eyebrow={
           <Badge variant="secondary" className="h-7 px-3 text-sm">
             Community seller reports for DonutSMP

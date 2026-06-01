@@ -130,6 +130,10 @@ class RatingService:
         """Return the newest ratings across all sellers."""
         return self.repository.list_recent_ratings(limit=limit)
 
+    def total_ratings(self) -> int:
+        """Return the total number of ratings stored in the system."""
+        return self.repository.count_ratings()
+
     def resolve_profile(self, username: str) -> MinecraftProfile:
         """Expose Mojang identity resolution for other backend routes.
 

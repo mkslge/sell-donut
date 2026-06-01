@@ -72,6 +72,7 @@ export function RatingForm({ defaultUsername = "" }: RatingFormProps) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="SPAWNER">Spawner</SelectItem>
+              <SelectItem value="BASE">Base</SelectItem>
               <SelectItem value="GEAR">Gear</SelectItem>
               <SelectItem value="MONEY">Money</SelectItem>
               <SelectItem value="OTHER">Other</SelectItem>
@@ -87,7 +88,7 @@ export function RatingForm({ defaultUsername = "" }: RatingFormProps) {
         <Input
           id="tradeDescription"
           name="tradeDescription"
-          placeholder="Skeleton spawner for 3m"
+          placeholder="Skeleton spawner or base for 3m"
           required
           maxLength={120}
         />

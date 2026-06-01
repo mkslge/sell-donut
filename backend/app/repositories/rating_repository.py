@@ -156,6 +156,18 @@ class RatingRepository:
             )
         return [self._row_to_rating(row) for row in rows]
 
+    def count_ratings(self) -> int:
+        """Return the total number of stored ratings."""
+        rows = self.database.query(
+            """
+            SELECT COUNT(*) AS total_ratings
+            FROM ratings
+            """
+        )
+        if not rows:
+            return 0
+        return int(rows[0]["total_ratings"])
+
     def list_ratings(self, seller_id: str) -> list[Rating]:
         """Return all ratings for a seller id, newest first.
 

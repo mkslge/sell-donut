@@ -95,6 +95,10 @@ export async function getRecentRatings(limit = 8): Promise<RatingCardRating[]> {
   return response.map(toRatingCardRating);
 }
 
+export async function getRatingStats(): Promise<{ totalRatings: number }> {
+  return fetchBackendJson<{ totalRatings: number }>("/rating/stats");
+}
+
 export async function getSellerRatings(
   username: string,
 ): Promise<{ sellerUsername: string; ratings: RatingCardRating[] }> {

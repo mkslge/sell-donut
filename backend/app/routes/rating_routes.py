@@ -6,6 +6,7 @@ from app.repositories.rating_repository import RatingRepository
 from app.schemas.rating_schemas import (
     RatingCreate,
     RatingResponse,
+    RatingStatsResponse,
     SellerRatingsResponse,
     SellerSummaryResponse,
 )
@@ -38,6 +39,12 @@ def get_rating_service(request: Request) -> RatingService:
 def list_recent_ratings(request: Request, limit: int = 8) -> list[RatingResponse]:
     """Handle `GET /rating/recent`."""
     return rating_controller.list_recent_ratings(get_rating_service(request), limit=limit)
+
+
+@router.get("/stats", response_model=RatingStatsResponse)
+def get_stats(request: Request) -> RatingStatsResponse:
+    """Handle `GET /rating/stats`."""
+    return rating_controller.get_stats(get_rating_service(request))
 
 
 @router.post("/{username}", response_model=RatingResponse, status_code=201)

@@ -20,9 +20,17 @@ def calculate_reputation(ratings: list[Rating]) -> Reputation:
     total = len(ratings)
     if total == 0:
         return Reputation.NO_DATA
+    
 
-    scammer_count = sum(1 for rating in ratings if rating.verdict == Verdict.SCAMMER)
-    legit_count = sum(1 for rating in ratings if rating.verdict == Verdict.LEGIT)
+    scammer_count = 0
+    legit_count = 0
+
+    for rating in ratings:
+        if rating.verdict == Verdict.SCAMMER:
+            scammer_count += 1
+        elif rating.verdict == Verdict.LEGIT:
+            legit_count += 1
+
     legit_percentage = round((legit_count / total) * 100)
 
     if total >= 3 and scammer_count == total:

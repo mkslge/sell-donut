@@ -9,7 +9,7 @@ export function Navbar() {
         aria-label="Main navigation"
       >
         <Link className="text-lg font-bold tracking-normal" href="/">
-          SellDonut
+          DonutTrades
         </Link>
         <div className="flex items-center gap-2">
           <Button asChild variant="ghost">

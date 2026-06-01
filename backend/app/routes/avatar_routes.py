@@ -5,7 +5,7 @@ from app.routes.rating_routes import get_rating_service
 
 
 router = APIRouter(prefix="/avatar", tags=["avatar"])
-
+DEFAULT_PROFILE = "MHF_Steve"
 
 @router.get("/{username}")
 def avatar(username: str, request: Request) -> RedirectResponse:
@@ -24,7 +24,15 @@ def avatar(username: str, request: Request) -> RedirectResponse:
     The frontend can use this stable backend endpoint as an image source. If
     the avatar provider ever changes, only this route needs to be updated.
     """
-    profile = get_rating_service(request).resolve_profile(username)
+    try:
+      profile = get_rating_service(request).resolve_profile(username)
+    except:
+       #use default player head in the case of a username not being loaded
+       profile = get_rating_service(request).resolve_profile(DEFAULT_PROFILE)
+    
+
+
+
     return RedirectResponse(
         url=f"https://api.mineatar.io/face/{profile.uuid}?scale=32",
         status_code=307,

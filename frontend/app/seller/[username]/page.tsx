@@ -7,6 +7,7 @@ import { PageHero } from "@/components/layout/PageHero";
 import { SectionHeader } from "@/components/layout/SectionHeader";
 import { TwoColumnSection } from "@/components/layout/TwoColumnSection";
 import { StatsGrid } from "@/components/StatsGrid";
+import { RatingDistributionBar } from "@/components/profile/RatingDistributionBar";
 import { SellerAvatar } from "@/components/profile/SellerAvatar";
 import type { SellerPageProps } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
@@ -20,7 +21,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { minecraftUsernameSchema, trustLabel } from "@/lib/ratings";
-import { getSellerRatings, getSellerSummary, summarizeCounts } from "@/lib/api";
+import { getSellerRatings, getSellerSummary } from "@/lib/api";
 
 export default async function SellerPage({ params }: SellerPageProps) {
   const { username } = await params;
@@ -48,8 +49,13 @@ export default async function SellerPage({ params }: SellerPageProps) {
   ]);
 
   const ratings = sellerRatings.ratings;
-  const counts = summarizeCounts(ratings);
   const displayName = sellerSummary.sellerUsername ?? sellerRatings.sellerUsername;
+  const counts = {
+    total: sellerSummary.totalRatings,
+    legit: sellerSummary.legitCount,
+    scam: sellerSummary.scammerCount,
+    mixed: sellerSummary.mixedCount,
+  };
 
   return (
     <PageContainer>
@@ -71,11 +77,13 @@ export default async function SellerPage({ params }: SellerPageProps) {
       />
 
       <section className="grid gap-6 pb-12">
+        <RatingDistributionBar counts={counts} />
+
         <Card>
           <CardHeader>
             <CardTitle>Trust snapshot</CardTitle>
             <CardDescription>
-              Aggregate community reports for this username.
+              Aggregate community reports for this player.
             </CardDescription>
             <CardAction>
               <Badge variant="outline">{trustLabel(counts)}</Badge>

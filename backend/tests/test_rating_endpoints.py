@@ -85,6 +85,10 @@ def test_rating_flow(tmp_path):
         assert len(recent) == 1
         assert recent[0]["sellerUsername"] == "SomeSeller"
 
+        stats_response = client.get("/rating/stats")
+        assert stats_response.status_code == 200
+        assert stats_response.json() == {"totalRatings": 1}
+
 
 def test_empty_seller_returns_empty_rating_list_and_no_data_summary(tmp_path):
     app = make_app(tmp_path)
@@ -106,6 +110,10 @@ def test_empty_seller_returns_empty_rating_list_and_no_data_summary(tmp_path):
             "legitPercentage": 0,
             "reputation": "NO_DATA",
         }
+
+        stats_response = client.get("/rating/stats")
+        assert stats_response.status_code == 200
+        assert stats_response.json() == {"totalRatings": 0}
 
 
 def test_invalid_username_returns_400(tmp_path):
@@ -176,3 +184,20 @@ def test_rating_rate_limit_is_enforced(tmp_path):
 
     assert first_response.status_code == 201
     assert second_response.status_code == 429
+
+
+def test_visit_counter_increments_and_reads_back(tmp_path):
+    app = make_app(tmp_path)
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as client:
+        first_response = client.post("/logging/visit")
+        second_response = client.post("/logging/visit")
+        read_response = client.get("/logging/visits")
+
+    assert first_response.status_code == 200
+    assert first_response.json() == {"visits": 1}
+    assert second_response.status_code == 200
+    assert second_response.json() == {"visits": 2}
+    assert read_response.status_code == 200
+    assert read_response.json() == {"visits": 2}

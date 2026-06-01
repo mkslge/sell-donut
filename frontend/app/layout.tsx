@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Navbar } from "@/components/layout/Navbar";
+import { VisitLogger } from "@/components/VisitLogger";
 
 export const metadata: Metadata = {
-  title: "SellDonut",
+  title: "DonutTrades",
   description: "Community seller ratings for DonutSMP trades.",
 };
 
@@ -17,6 +18,7 @@ export default function RootLayout({
       <body className="min-h-screen bg-background text-foreground">
         <div className="min-h-screen">
           <Navbar />
+          <VisitLogger />
           <main>{children}</main>
         </div>
       </body>
