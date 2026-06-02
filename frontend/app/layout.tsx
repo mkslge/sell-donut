@@ -6,6 +6,9 @@ import { VisitLogger } from "@/components/VisitLogger";
 export const metadata: Metadata = {
   title: "DonutTrades",
   description: "Community seller ratings for DonutSMP trades.",
+  icons: {
+    icon: "/icon.jpg",
+  },
 };
 
 export default function RootLayout({
