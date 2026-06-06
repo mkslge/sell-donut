@@ -4,11 +4,11 @@ SellDonut is a prototype reputation board for DonutSMP trades. Players can look 
 
 
 # Images
-![Landing Page](<Screenshot 2026-06-06 at 12.35.08 PM.png>)
+![Landing Page](<Images/Screenshot 2026-06-06 at 12.35.08 PM.png>)
 
-![Leaderboard](<Screenshot 2026-06-06 at 12.37.25 PM.png>)
+![Leaderboard](<Images/Screenshot 2026-06-06 at 12.37.25 PM.png>)
 
-![Player Profiles](<Screenshot 2026-06-06 at 12.37.39 PM.png>)
+![Player Profiles](<Images/Screenshot 2026-06-06 at 12.37.39 PM.png>)
 
 
 ## Project Layout
