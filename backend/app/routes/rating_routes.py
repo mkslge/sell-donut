@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Query, Request
 
 import app.controllers.rating_controller as rating_controller
 from app.integrations.mojang_client import MojangProfileClient
 from app.repositories.rating_repository import RatingRepository
 from app.schemas.rating_schemas import (
+    LeaderboardResponse,
     RatingCreate,
     RatingResponse,
     RatingStatsResponse,
@@ -45,6 +46,15 @@ def list_recent_ratings(request: Request, limit: int = 8) -> list[RatingResponse
 def get_stats(request: Request) -> RatingStatsResponse:
     """Handle `GET /rating/stats`."""
     return rating_controller.get_stats(get_rating_service(request))
+
+
+@router.get("/leaderboard", response_model=LeaderboardResponse)
+def get_leaderboard(
+    request: Request,
+    limit: int = Query(default=10, ge=1, le=50),
+) -> LeaderboardResponse:
+    """Handle `GET /rating/leaderboard`."""
+    return rating_controller.get_leaderboard(get_rating_service(request), limit=limit)
 
 
 @router.post("/{username}", response_model=RatingResponse, status_code=201)

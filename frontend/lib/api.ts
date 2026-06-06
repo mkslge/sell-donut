@@ -1,4 +1,5 @@
 import type {
+  BackendLeaderboardResponse,
   BackendRatingResponse,
   BackendSellerRatingsResponse,
   BackendSellerSummaryResponse,
@@ -97,6 +98,14 @@ export async function getRecentRatings(limit = 8): Promise<RatingCardRating[]> {
 
 export async function getRatingStats(): Promise<{ totalRatings: number }> {
   return fetchBackendJson<{ totalRatings: number }>("/rating/stats");
+}
+
+export async function getLeaderboard(
+  limit = 10,
+): Promise<BackendLeaderboardResponse> {
+  return fetchBackendJson<BackendLeaderboardResponse>(
+    `/rating/leaderboard?limit=${limit}`,
+  );
 }
 
 export async function getSellerRatings(

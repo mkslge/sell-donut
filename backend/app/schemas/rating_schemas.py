@@ -72,3 +72,22 @@ class RatingStatsResponse(BaseModel):
     total_ratings: int = Field(alias="totalRatings", ge=0)
 
     model_config = ConfigDict(populate_by_name=True)
+
+
+class LeaderboardEntryResponse(BaseModel):
+    seller_username: str = Field(alias="sellerUsername")
+    normalized_username: str = Field(alias="normalizedUsername")
+    minecraft_uuid: str = Field(alias="minecraftUuid")
+    scam_count: int = Field(alias="scamCount", ge=0)
+    legit_count: int = Field(alias="legitCount", ge=0)
+    mixed_count: int = Field(alias="mixedCount", ge=0)
+    total_ratings: int = Field(alias="totalRatings", ge=0)
+
+    model_config = ConfigDict(populate_by_name=True)
+
+
+class LeaderboardResponse(BaseModel):
+    scam: list[LeaderboardEntryResponse]
+    legit: list[LeaderboardEntryResponse]
+
+    model_config = ConfigDict(populate_by_name=True)

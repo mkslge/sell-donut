@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Search, ShieldCheck } from "lucide-react";
 import { minecraftUsernameSchema } from "@/lib/ratings";
 import { getRatingStats, getRecentRatings } from "@/lib/api";
 import { RatingCard } from "@/components/RatingCard";
@@ -42,12 +42,45 @@ export default async function Home() {
   return (
     <PageContainer>
       <PageHero
-        title="Know who you are trading with before you /pay."
-        description={`DonutTrades keeps a searchable record of ${totalRatingsLabel} community ${ratingNoun}, so spawner, base, item, money, and service deals have a public reputation trail.`}
+        title="Check a DonutSMP trader before you /pay."
+        description={`Search ${totalRatingsLabel} community ${ratingNoun} for spawner, base, item, money, and service trades before you risk your balance.`}
         eyebrow={
           <Badge variant="secondary" className="h-7 px-3 text-sm">
-            Community seller reports for DonutSMP
+            DonutSMP community reputation
           </Badge>
+        }
+        visual={
+          <div className="grid w-full max-w-sm gap-3 rounded-xl border bg-card p-4 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-semibold text-muted-foreground">
+                  Live report count
+                </p>
+                <strong className="text-3xl font-bold">
+                  {totalRatingsLabel}
+                </strong>
+              </div>
+              <div className="grid size-12 place-items-center rounded-lg bg-accent text-accent-foreground">
+                <ShieldCheck className="size-6" aria-hidden="true" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="rounded-lg border bg-background px-3 py-2">
+                <CheckCircle2
+                  className="mb-1 size-4 text-primary"
+                  aria-hidden="true"
+                />
+                Legit reports
+              </div>
+              <div className="rounded-lg border bg-background px-3 py-2">
+                <AlertTriangle
+                  className="mb-1 size-4 text-destructive"
+                  aria-hidden="true"
+                />
+                Scam warnings
+              </div>
+            </div>
+          </div>
         }
       >
         <form
@@ -57,7 +90,7 @@ export default async function Home() {
           <Input
             className="h-11 border-transparent bg-transparent px-3 text-base focus-visible:ring-0"
             name="username"
-            placeholder="Search username (e.g. Marlowww)"
+            placeholder="Search Minecraft username"
             required
             minLength={1}
             maxLength={16}
@@ -68,6 +101,20 @@ export default async function Home() {
             Search
           </Button>
         </form>
+        <div className="mt-3 flex flex-wrap gap-2 text-sm text-muted-foreground">
+          <span className="rounded-md border bg-background px-2 py-1">
+            Skeleton spawners
+          </span>
+          <span className="rounded-md border bg-background px-2 py-1">
+            Kelp farms
+          </span>
+          <span className="rounded-md border bg-background px-2 py-1">
+            Bases
+          </span>
+          <span className="rounded-md border bg-background px-2 py-1">
+            Gambling rooms
+          </span>
+        </div>
       </PageHero>
 
       <TwoColumnSection>
@@ -91,15 +138,20 @@ export default async function Home() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Prototype rules</CardTitle>
-            <CardDescription>Use ratings as signal, not proof.</CardDescription>
+            <CardTitle>Trade smarter</CardTitle>
+            <CardDescription>Ratings are signal, not proof.</CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
-            <p className="rounded-lg border bg-accent px-3 py-2 text-sm leading-6 text-accent-foreground">
-              Ratings are anonymous community reports, not verified proof. Treat
-              them as a warning signal and ask for evidence before high-value
-              trades.
-            </p>
+            <div className="grid gap-3 text-sm leading-6">
+              <p className="rounded-lg border bg-accent px-3 py-2 text-accent-foreground">
+                Check recent reports before going first, especially on expensive
+                spawners, bases, and casino payouts.
+              </p>
+              <p className="rounded-lg border bg-background px-3 py-2 text-muted-foreground">
+                If a deal looks risky, ask for screenshots, use smaller
+                batches, or walk away.
+              </p>
+            </div>
             <Button asChild className="w-fit">
               <Link href="/rate">Rate a seller</Link>
             </Button>

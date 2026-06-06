@@ -134,6 +134,10 @@ class RatingService:
         """Return the total number of ratings stored in the system."""
         return self.repository.count_ratings()
 
+    def get_leaderboard(self, limit: int = 10) -> dict[str, list[dict]]:
+        """Return top sellers by scam and legit report counts."""
+        return self.repository.leaderboard(limit=limit)
+
     def resolve_profile(self, username: str) -> MinecraftProfile:
         """Expose Mojang identity resolution for other backend routes.
 

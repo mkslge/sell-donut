@@ -1,4 +1,5 @@
 from app.schemas.rating_schemas import (
+    LeaderboardResponse,
     RatingCreate,
     RatingResponse,
     RatingStatsResponse,
@@ -92,3 +93,8 @@ def list_recent_ratings(service: RatingService, limit: int = 8) -> list[RatingRe
 def get_stats(service: RatingService) -> RatingStatsResponse:
     """Return global rating statistics for the landing page."""
     return RatingStatsResponse(totalRatings=service.total_ratings())
+
+
+def get_leaderboard(service: RatingService, limit: int = 10) -> LeaderboardResponse:
+    """Return top scam and legit sellers in API response shape."""
+    return LeaderboardResponse.model_validate(service.get_leaderboard(limit=limit))

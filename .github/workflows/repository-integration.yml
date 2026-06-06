@@ -1,0 +1,52 @@
+name: Repository integration
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Explain split-repo deployment
+        run: |
+          echo "Top-level repository integration is intentionally non-deploying."
+          echo "Backend deployment lives in backend/.github/workflows/backend-deploy.yml."
+          echo "Frontend deployment lives in frontend/.github/workflows/frontend-deploy.yml."
+
+      - name: Report repository layout
+        run: |
+          if [ -d backend ]; then echo "backend directory found"; else echo "backend directory missing"; fi
+          if [ -d frontend ]; then echo "frontend directory found"; else echo "frontend directory missing"; fi
+          if [ -f backend/.github/workflows/backend-deploy.yml ]; then echo "backend workflow found"; else echo "backend workflow missing"; fi
+          if [ -f frontend/.github/workflows/frontend-deploy.yml ]; then echo "frontend workflow found"; else echo "frontend workflow missing"; fi
+
+      - name: Verify backend workflow exists
+        run: |
+          if [ -f backend/.github/workflows/backend-deploy.yml ]; then
+            echo "Backend workflow is present."
+            sed -n '1,20p' backend/.github/workflows/backend-deploy.yml
+          else
+            echo "Backend workflow is not present in this checkout."
+          fi
+
+      - name: Verify frontend workflow exists
+        run: |
+          if [ -f frontend/.github/workflows/frontend-deploy.yml ]; then
+            echo "Frontend workflow is present."
+            sed -n '1,20p' frontend/.github/workflows/frontend-deploy.yml
+          else
+            echo "Frontend workflow is not present in this checkout."
+          fi

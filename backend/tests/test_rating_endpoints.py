@@ -25,6 +25,22 @@ class FakeMojangClient:
                 uuid="069a79f444e94726a5befca90e38aaf5",
                 username="Notch",
             ),
+            "alphascammer": MinecraftProfile(
+                uuid="44444444444444444444444444444444",
+                username="AlphaScammer",
+            ),
+            "betascammer": MinecraftProfile(
+                uuid="55555555555555555555555555555555",
+                username="BetaScammer",
+            ),
+            "legitking": MinecraftProfile(
+                uuid="66666666666666666666666666666666",
+                username="LegitKing",
+            ),
+            "mixedonly": MinecraftProfile(
+                uuid="77777777777777777777777777777777",
+                username="MixedOnly",
+            ),
         }
 
     def lookup_profile(self, username: str) -> MinecraftProfile | None:
@@ -33,6 +49,23 @@ class FakeMojangClient:
 
 def make_app(tmp_path):
     return create_app(tmp_path / "test.db", mojang_client=FakeMojangClient())
+
+
+def rating_payload(outcome: str = "LEGIT") -> dict:
+    return {
+        "outcome": outcome,
+        "tradeCategory": "GEAR",
+        "tradeDescription": "Diamond set",
+        "reviewText": "Seller completed the trade details for this test.",
+    }
+
+
+def post_rating(client, username: str, outcome: str, index: int):
+    return client.post(
+        f"/rating/{username}",
+        json=rating_payload(outcome),
+        headers={"User-Agent": f"leaderboard-test-{index}"},
+    )
 
 
 def test_rating_flow(tmp_path):
@@ -114,6 +147,109 @@ def test_empty_seller_returns_empty_rating_list_and_no_data_summary(tmp_path):
         stats_response = client.get("/rating/stats")
         assert stats_response.status_code == 200
         assert stats_response.json() == {"totalRatings": 0}
+
+
+def test_leaderboard_returns_top_scam_and_legit_sellers(tmp_path):
+    app = make_app(tmp_path)
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as client:
+        submissions = [
+            ("BetaScammer", "SCAMMER"),
+            ("BetaScammer", "SCAMMER"),
+            ("AlphaScammer", "SCAMMER"),
+            ("AlphaScammer", "LEGIT"),
+            ("LegitKing", "LEGIT"),
+            ("LegitKing", "LEGIT"),
+            ("LegitKing", "MIXED"),
+            ("MixedOnly", "MIXED"),
+        ]
+        for index, (username, outcome) in enumerate(submissions):
+            response = post_rating(client, username, outcome, index)
+            assert response.status_code == 201
+
+        response = client.get("/rating/leaderboard")
+
+    assert response.status_code == 200
+    leaderboard = response.json()
+    assert leaderboard["scam"] == [
+        {
+            "sellerUsername": "BetaScammer",
+            "normalizedUsername": "betascammer",
+            "minecraftUuid": "55555555555555555555555555555555",
+            "scamCount": 2,
+            "legitCount": 0,
+            "mixedCount": 0,
+            "totalRatings": 2,
+        },
+        {
+            "sellerUsername": "AlphaScammer",
+            "normalizedUsername": "alphascammer",
+            "minecraftUuid": "44444444444444444444444444444444",
+            "scamCount": 1,
+            "legitCount": 1,
+            "mixedCount": 0,
+            "totalRatings": 2,
+        },
+    ]
+    assert leaderboard["legit"] == [
+        {
+            "sellerUsername": "LegitKing",
+            "normalizedUsername": "legitking",
+            "minecraftUuid": "66666666666666666666666666666666",
+            "scamCount": 0,
+            "legitCount": 2,
+            "mixedCount": 1,
+            "totalRatings": 3,
+        },
+        {
+            "sellerUsername": "AlphaScammer",
+            "normalizedUsername": "alphascammer",
+            "minecraftUuid": "44444444444444444444444444444444",
+            "scamCount": 1,
+            "legitCount": 1,
+            "mixedCount": 0,
+            "totalRatings": 2,
+        },
+    ]
+
+
+def test_leaderboard_limit_and_username_tie_sort(tmp_path):
+    app = make_app(tmp_path)
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as client:
+        submissions = [
+            ("BetaScammer", "SCAMMER"),
+            ("AlphaScammer", "SCAMMER"),
+            ("LegitKing", "LEGIT"),
+            ("SomeSeller", "LEGIT"),
+        ]
+        for index, (username, outcome) in enumerate(submissions):
+            response = post_rating(client, username, outcome, index)
+            assert response.status_code == 201
+
+        response = client.get("/rating/leaderboard?limit=1")
+
+    assert response.status_code == 200
+    leaderboard = response.json()
+    assert [entry["sellerUsername"] for entry in leaderboard["scam"]] == [
+        "AlphaScammer"
+    ]
+    assert [entry["sellerUsername"] for entry in leaderboard["legit"]] == [
+        "LegitKing"
+    ]
+
+
+def test_empty_leaderboard_returns_empty_lists(tmp_path):
+    app = make_app(tmp_path)
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as client:
+        response = client.get("/rating/leaderboard")
+
+    assert response.status_code == 200
+    assert response.json() == {"scam": [], "legit": []}
 
 
 def test_invalid_username_returns_400(tmp_path):

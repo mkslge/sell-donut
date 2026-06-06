@@ -7,7 +7,8 @@ export const metadata: Metadata = {
   title: "DonutTrades",
   description: "Community seller ratings for DonutSMP trades.",
   icons: {
-    icon: "/icon.jpg",
+    icon: "/favicon.jpg",
+    shortcut: "/favicon.jpg",
   },
 };
 

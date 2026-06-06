@@ -58,6 +58,21 @@ export type BackendSellerSummaryResponse = {
   reputation: string;
 };
 
+export type BackendLeaderboardEntry = {
+  sellerUsername: string;
+  normalizedUsername: string;
+  minecraftUuid: string;
+  scamCount: number;
+  legitCount: number;
+  mixedCount: number;
+  totalRatings: number;
+};
+
+export type BackendLeaderboardResponse = {
+  scam: BackendLeaderboardEntry[];
+  legit: BackendLeaderboardEntry[];
+};
+
 export type RatingCardProps = {
   rating: RatingCardRating;
 };

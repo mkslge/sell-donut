@@ -54,10 +54,16 @@ jobs:
           rm -rf deploy
           cp -R .next/standalone deploy
           mkdir -p deploy/.next/static
-          cp -R .next/static deploy/.next/static
+          cp -R .next/static/. deploy/.next/static/
           if [ -d public ]; then cp -R public deploy/public; fi
           cd deploy
           zip -r "../${{ env.DEPLOYMENT_PACKAGE }}" .
+
+      - name: Verify deployment package
+        run: |
+          unzip -l "${{ env.DEPLOYMENT_PACKAGE }}" | grep -q 'server.js'
+          unzip -l "${{ env.DEPLOYMENT_PACKAGE }}" | grep -q '.next/static/'
+          unzip -l "${{ env.DEPLOYMENT_PACKAGE }}" | grep -q '.next/static/chunks/'
 
       - name: Deploy frontend to Azure App Service
         uses: azure/webapps-deploy@v3

@@ -168,6 +168,14 @@ class RatingRepository:
             return 0
         return int(rows[0]["total_ratings"])
 
+    def leaderboard(self, limit: int = 10) -> dict[str, list[dict[str, Any]]]:
+        """Return top sellers by scam and legit report counts."""
+        safe_limit = max(1, min(limit, 50))
+        return {
+            "scam": self._leaderboard_for_count("scam_count", safe_limit),
+            "legit": self._leaderboard_for_count("legit_count", safe_limit),
+        }
+
     def list_ratings(self, seller_id: str) -> list[Rating]:
         """Return all ratings for a seller id, newest first.
 
@@ -221,6 +229,80 @@ class RatingRepository:
         if not rows:
             return None
         return rows[0]
+
+    def _leaderboard_for_count(
+        self,
+        count_column: str,
+        limit: int,
+    ) -> list[dict[str, Any]]:
+        if count_column not in {"scam_count", "legit_count"}:
+            raise ValueError("Unsupported leaderboard count column.")
+
+        if self.database.backend == "azure_sql":
+            rows = self.database.query(
+                f"""
+                SELECT TOP ({limit}) *
+                FROM (
+                    SELECT
+                        s.seller_username,
+                        s.normalized_username,
+                        s.minecraft_uuid,
+                        SUM(CASE WHEN r.verdict = 'SCAMMER' THEN 1 ELSE 0 END) AS scam_count,
+                        SUM(CASE WHEN r.verdict = 'LEGIT' THEN 1 ELSE 0 END) AS legit_count,
+                        SUM(CASE WHEN r.verdict = 'MIXED' THEN 1 ELSE 0 END) AS mixed_count,
+                        COUNT(*) AS total_ratings
+                    FROM sellers s
+                    JOIN ratings r ON r.seller_id = s.id
+                    GROUP BY
+                        s.id,
+                        s.seller_username,
+                        s.normalized_username,
+                        s.minecraft_uuid
+                ) leaderboard
+                WHERE {count_column} > 0
+                ORDER BY {count_column} DESC, seller_username ASC
+                """
+            )
+        else:
+            rows = self.database.query(
+                f"""
+                SELECT *
+                FROM (
+                    SELECT
+                        s.seller_username,
+                        s.normalized_username,
+                        s.minecraft_uuid,
+                        SUM(CASE WHEN r.verdict = 'SCAMMER' THEN 1 ELSE 0 END) AS scam_count,
+                        SUM(CASE WHEN r.verdict = 'LEGIT' THEN 1 ELSE 0 END) AS legit_count,
+                        SUM(CASE WHEN r.verdict = 'MIXED' THEN 1 ELSE 0 END) AS mixed_count,
+                        COUNT(*) AS total_ratings
+                    FROM sellers s
+                    JOIN ratings r ON r.seller_id = s.id
+                    GROUP BY
+                        s.id,
+                        s.seller_username,
+                        s.normalized_username,
+                        s.minecraft_uuid
+                ) leaderboard
+                WHERE {count_column} > 0
+                ORDER BY {count_column} DESC, seller_username ASC
+                LIMIT ?
+                """,
+                (limit,),
+            )
+
+        return [self._leaderboard_row(row) for row in rows]
+
+    def _leaderboard_row(self, row: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "seller_username": str(row["seller_username"]),
+            "normalized_username": str(row["normalized_username"]),
+            "minecraft_uuid": str(row["minecraft_uuid"]),
+            "scam_count": int(row["scam_count"]),
+            "legit_count": int(row["legit_count"]),
+            "mixed_count": int(row["mixed_count"]),
+            "total_ratings": int(row["total_ratings"]),
+        }
 
     def _ensure_seller(
         self,
